@@ -1,15 +1,181 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
-    <meta charset="utf-8">
     <link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/css/reset.css">
     <link rel="stylesheet" type="text/css" href="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.css">
     <script src="https://cdn.mxpnl.com/libs/mixpanel-platform/build/mixpanel-platform.v0.latest.min.js"></script>
   </head>
   <body class="mixpanel-platform-body">
-    <h1>Hello, World!</h1>
+    <div class="mixpanel-platform-section">
+      <div id="dateSelect" style="float: right;"></div>
+      <div id="eventSelect1" style="float: left;"></div>
+      <div style="clear: both;"></div>
+      <div id="intervalSelect" style="float: right;"></div>
+      <div id="eventSelect2" style="float: left;"></div>
+      <div style="clear: both;"></div>
+      <div id="unitSelect" style="float: right;"></div>
+      <div id="eventSelect3" style="float: left; display: none;"></div>
+      <div style="clear: both;"></div>
+      <div id="eventSelect" style="float: right;"></div>
+      <div id="eventSelect4" style="float: left; display: none;"></div>
+      <div style="clear: both;"></div>
+      <div id="eventSelect5" style="float: left; display: none;"></div>
+      <div style="clear: both;"></div>
+      <div id="graph"></div>
+    </div>
     <script>
-      // Run queries and display results here
+      MP.api.ready(function() {
+        var dateSelect  = $('#dateSelect').MPDatepicker();
+        var eventGraph  = $('#graph').MPChart({chartType: 'line'});
+        var eventPicker1 = $('#eventSelect1').MPEventSelect();
+        var eventPicker2 = $('#eventSelect2').MPEventSelect();
+        var eventPicker3 = $('#eventSelect3').MPEventSelect();
+        var eventPicker4 = $('#eventSelect4').MPEventSelect();
+        var eventPicker5 = $('#eventSelect5').MPEventSelect();
+        
+        var options = {
+          items: [
+            {label: '-- Select interval length in days --', value: 0},
+            {label: '1', value: 1},
+            {label: '3', value: 3},
+            {label: '5', value: 5},
+            {label: '7', value: 7},
+            {label: '14', value: 14},
+            {label: '30', value: 30}
+          ]
+        };
+        
+        var intervalPicker = $('#intervalSelect').MPSelect(options);
+        
+         var options2 = {
+          items: [
+            {label: '-- Select interval unit of time --', value: 0},
+            {label: 'Minutes', value: 'minute'},
+            {label: 'Hour', value: 'hour'},
+            {label: 'Day', value: 'day'}
+          ]
+        };
+        
+        var unitPicker = $('#unitSelect').MPSelect(options2);
+        
+        var options3 = {
+          items: [
+            {label: '-- Select number of events in funnel --', value: 0},
+            {label: '2 events', value: 2},
+            {label: '3 events', value: 3},
+            {label: '4 events', value: 4},
+            {label: '5 events', value: 5}
+          ]
+        };
+        
+        var eventsPicker = $('#eventSelect').MPSelect(options3);
+        
+        var eventsNum;
+        
+        var params = {
+          from: moment().subtract(1, 'months'),
+          to: moment(),
+          limit: 200,                             // maximum number of results to return
+          length: 1,                             // number of days each user has to complete the funnel
+          length_unit: 'day'
+          //where: 'properties["age"] == 21',       // an expression to filter by.
+          //segment: '$browser'                     // a segmentation expression or event property.
+        };
+
+        var runQuery = function() {
+          var dateRange = dateSelect.MPDatepicker('value'),
+              interval = intervalPicker.MPSelect('value'),
+              unit = unitPicker.MPSelect('value');
+              
+          eventsNum = eventsPicker.MPSelect('value');
+              
+          var eventName1 = eventPicker1.MPEventSelect('value'),
+              eventName2 = eventPicker2.MPEventSelect('value'),
+              eventName3 = eventPicker3.MPEventSelect('value'),
+              eventName4 = eventPicker4.MPEventSelect('value'),
+              eventName5 = eventPicker5.MPEventSelect('value');
+          
+          params['from'] = dateRange.from.toISOString().substring(0, 10);
+          params['to'] = dateRange.to.toISOString().substring(0, 10);
+          params['length'] = interval;
+          params['length_unit'] = unit;
+          
+          if(eventsNum == 2){
+            if(eventName1 != null && eventName2 != null && interval != null && unit != null)
+              MP.api.funnel(eventName1, eventName2, params).done(function(results) {
+                console.log(results);
+                processResults(results);
+              });
+          }
+          
+          if(eventsNum == 3){
+            if(eventName1 != null && eventName2 != null && eventName3 != null && interval != null && unit != null)
+              MP.api.funnel(eventName1, eventName2, eventName3, params).done(function(results) {
+                console.log(results);
+                processResults(results);
+              });
+          }
+          
+          if(eventsNum == 4){
+            if(eventName1 != null && eventName2 != null && eventName3 != null && eventName4 != null && interval != null && unit != null)
+              MP.api.funnel(eventName1, eventName2, eventName3, eventName4, params).done(function(results) {
+                console.log(results);
+                processResults(results);
+              });
+          }
+          
+          else{
+            if(eventName1 != null && eventName2 != null && eventName3 != null && eventName4 != null && eventName5 != null && interval != null && unit != null)
+              MP.api.funnel(eventName1, eventName2, eventName3, eventName4, eventName5, params).done(function(results) {
+                console.log(results);
+                processResults(results);
+              });
+          }
+        };
+        
+        var processResults = function(results) {
+          var newResults = {};
+          var dates = Object.keys(results[0]);
+          for(j=0; j<dates.length; j++) {
+            newResults[dates[j]] = (results[eventsNum-1][dates[j]]['count'] / results[0][dates[j]]['count']) * 100;
+            if(isNaN(newResults[dates[j]])){
+              newResults[dates[j]] = 0;
+            }
+          }
+          finalResults = {};
+          finalResults['Conversions'] = newResults;
+          console.log(newResults);
+          eventGraph.MPChart('setData', finalResults);
+        };
+        
+        intervalPicker.on('change', runQuery);
+        unitPicker.on('change', runQuery);
+        dateSelect.on('change', runQuery);
+        eventPicker1.on('change', runQuery);
+        eventPicker2.on('change', runQuery);
+        eventPicker3.on('change', runQuery);
+        eventPicker4.on('change', runQuery);
+        eventPicker5.on('change', runQuery);
+        eventsPicker.on('change', function(e, value) {
+          if(value == 3) { 
+            $("#eventSelect3").show();
+            $("#eventSelect4").hide();
+            $("#eventSelect5").hide();
+          }
+          else if(value == 4) {
+            $("#eventSelect3").show();
+            $("#eventSelect4").show();
+            $("#eventSelect5").hide();
+          }
+          else {
+            $("#eventSelect3").show();
+            $("#eventSelect4").show();
+            $("#eventSelect5").show();
+          }
+          runQuery();
+        });
+      });
     </script>
   </body>
 </html>
+
